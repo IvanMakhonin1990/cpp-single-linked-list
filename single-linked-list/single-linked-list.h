@@ -19,46 +19,23 @@ template <typename Type> class SingleLinkedList {
 public:
   SingleLinkedList() = default;
   
-  SingleLinkedList(std::initializer_list<Type> values){
+  SingleLinkedList(std::initializer_list<Type> values) {
     if (0 != GetSize() || 0 == values.size()) {
       return;
     }
-    auto tmp = InitFromIterators(values.begin(), values.end());
-    if (nullptr != tmp) {
-      this->swap(*tmp);
-    }
+    InitFromIterators(values.begin(), values.end());
   }
 
   SingleLinkedList(const SingleLinkedList &other) {
     if (!IsEmpty() || head_.next_node == other.head_.next_node) {
       return;
     }
-    auto tmp = InitFromIterators(other.begin(), other.end());
-    if (nullptr != tmp) {
-      this->swap(*tmp);
-    }
-  }
-
-  template <typename Iterator>
-  static SingleLinkedList *InitFromIterators(Iterator begin, Iterator end) {
-    
-    SingleLinkedList *tmp = new SingleLinkedList();
-    tmp->size_ = 0;
-    Node *pos = &(tmp->head_);
-    for (auto it = begin; it != end; ++it) {
-      pos->next_node = new Node(*it, nullptr);
-      pos = pos->next_node;
-      ++tmp->size_;
-    }
-    return tmp;
+    InitFromIterators(other.begin(), other.end());
   }
 
   SingleLinkedList &operator=(const SingleLinkedList &rhs) {
 
-    auto tmp = InitFromIterators(rhs.begin(), rhs.end());
-    if (nullptr != tmp) {
-      this->swap(*tmp);
-    }
+    InitFromIterators(rhs.begin(), rhs.end());
     return *this;
   }
 
@@ -98,9 +75,8 @@ public:
 
   // Очищает список за время O(N)
   void Clear() noexcept {
-    if (IsEmpty()) {
-      return;
-    }
+    assert(!IsEmpty());
+
     Node *n = head_.next_node;
     Node *p = head_.next_node;
     head_.next_node = nullptr;
@@ -113,16 +89,19 @@ public:
   }
 
   void PopFront() noexcept {
-    if (IsEmpty()) {
-      return;
-    }
+    assert(!IsEmpty());
+
     auto p = head_.next_node;
     head_.next_node = p->next_node;
     delete p;
     --size_;
   }
 
-  ~SingleLinkedList() { Clear(); }
+  ~SingleLinkedList() {
+    if (!IsEmpty()) {
+      Clear();
+    }
+  }
 
   // Шаблон класса «Базовый Итератор».
   // Определяет поведение итератора на элементы односвязного списка
@@ -222,12 +201,16 @@ public:
     // Операция разыменования. Возвращает ссылку на текущий элемент
     // Вызов этого оператора у итератора, не указывающего на существующий
     // элемент списка, приводит к неопределённому поведению
-    [[nodiscard]] reference operator*() const noexcept { return node_->value; }
+    [[nodiscard]] reference operator*() const noexcept { 
+        assert(nullptr != node_);
+        return node_->value; 
+    }
 
     // Операция доступа к члену класса. Возвращает указатель на текущий элемент
     // списка Вызов этого оператора у итератора, не указывающего на существующий
     // элемент списка, приводит к неопределённому поведению
     [[nodiscard]] pointer operator->() const noexcept {
+      assert(nullptr != node_);
       return &(node_->value);
     }
 
@@ -244,6 +227,20 @@ public:
   using Iterator = BasicIterator<Type>;
   // Константный итератор, предоставляющий доступ для чтения к элементам списка
   using ConstIterator = BasicIterator<const Type>;
+
+  template <typename Iterator>
+  void InitFromIterators(Iterator begin, Iterator end) {
+
+    SingleLinkedList *tmp = new SingleLinkedList();
+    tmp->size_ = 0;
+    Node *pos = &(tmp->head_);
+    for (auto it = begin; it != end; ++it) {
+      pos->next_node = new Node(*it, nullptr);
+      pos = pos->next_node;
+      ++tmp->size_;
+    }
+    this->swap(*tmp);
+  }
 
   // Возвращает итератор, ссылающийся на первый элемент
   // Если список пустой, возвращённый итератор будет равен end()
@@ -331,6 +328,7 @@ public:
     auto p = pos.node_->next_node;
     pos.node_->next_node = pos.node_->next_node->next_node;
     delete p;
+    --size_;
     return Iterator(pos.node_->next_node);
   }
 
